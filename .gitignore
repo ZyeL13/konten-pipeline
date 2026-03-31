@@ -1,0 +1,26 @@
+# Output runs — jangan di-push (bisa besar)
+output/
+scenes/
+tmp_edit/
+
+# Generated files
+*.mp4
+*.mp3
+*.wav
+*.png
+*_output.json
+*_log.json
+
+# Env & secrets
+.env
+*.key
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Piper binary (besar, download sendiri)
+piper/
+

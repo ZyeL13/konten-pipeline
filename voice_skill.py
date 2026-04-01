@@ -1,29 +1,21 @@
 """
 voice_skill.py — Edge TTS Edition
-Converts script JSON → MP3 menggunakan Microsoft Edge TTS.
-Gratis, no API key, kualitas jauh di atas gTTS.
-Support Indonesian + English dengan suara natural.
+Converts script JSON → MP3 using Microsoft Edge TTS (free, no API key).
+Full English pipeline for AI x Crypto content.
 
-Install: pip install edge-tts asyncio
-Run    : python voice_skill.py              ← auto detect bahasa
-         python voice_skill.py script.json id    ← force Indonesian
-         python voice_skill.py script.json en    ← force English
+Install: pip install edge-tts
+Run    : python voice_skill.py                    <- auto
+         python voice_skill.py script.json en     <- force English
 """
 
-import json
-import os
-import sys
-import asyncio
-import subprocess
-import shutil
+import json, os, sys, asyncio, re
 from pathlib import Path
 from datetime import datetime
 
 try:
     import edge_tts
 except ImportError:
-    print("[ERROR] edge-tts belum diinstall.")
-    print("  pip install edge-tts")
+    print("[ERROR] edge-tts not installed. Run: pip install edge-tts")
     sys.exit(1)
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -31,60 +23,46 @@ SCRIPT_FILE = "script_output.json"
 OUTPUT_MP3  = "voice.mp3"
 LOG_FILE    = "voice_log.json"
 
-# Voice options
 VOICES = {
-    "id": {
-        "main"    : "id-ID-ArdiNeural",      # Male, natural Indonesian
-        "alt"     : "id-ID-GadisNeural",     # Female, natural Indonesian
-        "label"   : "Indonesian Male (Ardi)"
-    },
     "en": {
-        "main"    : "en-US-ChristopherNeural", # Deep male, cinematic
-        "alt"     : "en-US-GuyNeural",         # Clear male
-        "label"   : "English Male (Christopher)"
+        "main" : "en-US-AndrewNeural",   # natural, conversational
+        "alt"  : "en-US-BrianNeural",    # deeper, suits cold/poetic tone
+        "label": "English Male (Andrew)"
     }
 }
 
-# Pilih bahasa: "id" | "en" | "auto"
-LANG = os.environ.get("TTS_LANG", "auto")
-
-# Rate: speaking speed. "-10%" = sedikit lebih lambat (cinematic)
-RATE   = os.environ.get("TTS_RATE", "-10%")
-
-# Volume: "+0%" = normal
+RATE   = os.environ.get("TTS_RATE",   "-5%")
 VOLUME = os.environ.get("TTS_VOLUME", "+0%")
 
-# ── HELPERS ───────────────────────────────────────────────────────────────────
-def load_script(path: str) -> dict:
-    p = Path(path)
-    if not p.exists():
-        print(f"[ERROR] Script file tidak ada: {path}")
-        sys.exit(1)
-    with open(p, encoding="utf-8") as f:
-        return json.load(f)
-
+# ── LANG DETECT ───────────────────────────────────────────────────────────────
 def detect_lang(script: dict, override: str = "auto") -> str:
-    if override in ["id", "en"]:
+    """Always returns 'en' — pipeline is English-only."""
+    if override in ["en", "id"]:
         return override
+    return "en"
 
-    # Auto detect dari hashtags / caption
-    text = " ".join([
-        script.get("hook", ""),
-        *[s.get("text", "") for s in script.get("scenes", [])],
-        script.get("cta", "")
-    ]).lower()
+# ── TEXT CLEANER ──────────────────────────────────────────────────────────────
+def clean_for_tts(text: str) -> str:
+    """Normalize text before sending to TTS."""
+    # Strip markdown symbols
+    text = re.sub(r'[#*_~`]', '', text)
+    # Strip URLs
+    text = re.sub(r'https?://\S+', '', text)
+    # Normalize number formats
+    text = re.sub(r'\$(\d+)B\b', r'\1 billion dollars', text)
+    text = re.sub(r'\$(\d+)M\b', r'\1 million dollars', text)
+    text = re.sub(r'\$(\d+)K\b', r'\1 thousand dollars', text)
+    text = re.sub(r'\$(\d+)',    r'\1 dollars', text)
+    text = re.sub(r'(\d+)%',    r'\1 percent', text)
+    text = re.sub(r'(\d+)x\b',  r'\1 times', text)
+    text = re.sub(r'(\d+)K\b',  r'\1 thousand', text)
+    # Clean double spaces
+    text = re.sub(r' +', ' ', text).strip()
+    return text
 
-    id_signals = ["yang", "dan", "dengan", "untuk", "ini", "itu",
-                  "bisa", "tidak", "sudah", "akan", "dari", "kamu"]
-    id_count   = sum(1 for w in id_signals if w in text)
-
-    return "id" if id_count >= 3 else "en"
-
-def build_narration(script: dict, lang: str) -> str:
-    """
-    Bangun narasi full dari script.
-    Edge TTS support SSML tapi kita pakai plain text + punctuation saja.
-    """
+# ── BUILD NARRATION ───────────────────────────────────────────────────────────
+def build_narration(script: dict) -> str:
+    """Assemble full narration from script JSON with cinematic pauses."""
     parts = []
 
     hook = script.get("hook", "").strip()
@@ -100,56 +78,83 @@ def build_narration(script: dict, lang: str) -> str:
     if cta:
         parts.append(cta)
 
-    # Gabung dengan titik untuk pause natural
-    return ". ".join(parts) + "."
+    # "... " between sections = ~0.5s natural pause each
+    raw = "... ".join(parts) + "."
+    return clean_for_tts(raw)
 
+# ── TTS ENGINE ────────────────────────────────────────────────────────────────
 async def generate_edge_tts(text: str, voice: str, output: str):
-    """Async Edge TTS generation."""
-    communicate = edge_tts.Communicate(
-        text   = text,
-        voice  = voice,
-        rate   = RATE,
-        volume = VOLUME
-    )
+    communicate = edge_tts.Communicate(text=text, voice=voice, rate=RATE, volume=VOLUME)
     await communicate.save(output)
 
 def run_tts(text: str, voice: str, output: str):
-    """Wrapper untuk run async dari sync context."""
     asyncio.run(generate_edge_tts(text, voice, output))
+
+def load_script(path: str) -> dict:
+    p = Path(path)
+    if not p.exists():
+        print(f"[ERROR] Script file not found: {path}")
+        sys.exit(1)
+    with open(p, encoding="utf-8") as f:
+        return json.load(f)
+
+def upgrade_audio(mp3_path: str):
+    """Upgrade 48kbps mono → 128kbps stereo 44.1kHz."""
+    import shutil, subprocess
+    tmp = mp3_path.replace(".mp3", "_hq.mp3")
+    result = subprocess.run([
+        "ffmpeg", "-y", "-i", mp3_path,
+        "-codec:a", "libmp3lame",
+        "-b:a", "128k",
+        "-ac", "2",
+        "-ar", "44100",
+        tmp
+    ], capture_output=True)
+    if result.returncode == 0:
+        shutil.move(tmp, mp3_path)
+        print(f"[voice] Upgraded → 128kbps stereo 44.1kHz")
+    else:
+        print(f"[voice] Audio upgrade skipped (ffmpeg error)")
 
 # ── MAIN ─────────────────────────────────────────────────────────────────────
 def run(script_path: str = SCRIPT_FILE, lang_override: str = "auto"):
     print("\n" + "="*55)
-    print("🎙️  VOICE SKILL — Edge TTS (Microsoft, Free)")
+    print("VOICE SKILL — Edge TTS")
     print("="*55)
 
-    script  = load_script(script_path)
-    lang    = detect_lang(script, lang_override)
-    voice   = VOICES[lang]["main"]
-    label   = VOICES[lang]["label"]
-    text    = build_narration(script, lang)
+    script = load_script(script_path)
+    lang   = detect_lang(script, lang_override)
+    voice  = VOICES["en"]["main"]
+    label  = VOICES["en"]["label"]
+    text   = build_narration(script)
 
-    print(f"[voice_skill] Lang   : {lang.upper()} — {label}")
-    print(f"[voice_skill] Voice  : {voice}")
-    print(f"[voice_skill] Rate   : {RATE}")
-    print(f"[voice_skill] Text   : {text[:100]}...")
-    print(f"[voice_skill] Generating...")
+    print(f"[voice] Lang    : {lang.upper()} — {label}")
+    print(f"[voice] Voice   : {voice}")
+    print(f"[voice] Rate    : {RATE}")
+    print(f"[voice] Preview : {text[:120]}...")
+    print(f"[voice] Generating...")
 
     try:
         run_tts(text, voice, OUTPUT_MP3)
     except Exception as e:
-        print(f"[ERROR] Edge TTS gagal: {e}")
-        print("  Cek koneksi internet.")
-        sys.exit(1)
+        print(f"[ERROR] TTS failed: {e}")
+        print("[voice] Trying alt voice...")
+        try:
+            alt = VOICES["en"]["alt"]
+            run_tts(text, alt, OUTPUT_MP3)
+            voice = alt
+        except Exception as e2:
+            print(f"[ERROR] Alt voice also failed: {e2}")
+            sys.exit(1)
+
+    upgrade_audio(OUTPUT_MP3)
 
     size_kb = Path(OUTPUT_MP3).stat().st_size / 1024
-    print(f"[OK] MP3 saved → {OUTPUT_MP3} ({size_kb:.1f} KB)")
+    print(f"[voice] Saved   → {OUTPUT_MP3} ({size_kb:.1f} KB)")
 
-    # Log
     log = {
         "generated_at"  : datetime.now().isoformat(),
         "source_script" : script_path,
-        "engine"        : "edge-tts",
         "lang"          : lang,
         "voice"         : voice,
         "rate"          : RATE,
@@ -159,11 +164,7 @@ def run(script_path: str = SCRIPT_FILE, lang_override: str = "auto"):
     with open(LOG_FILE, "w") as f:
         json.dump(log, f, ensure_ascii=False, indent=2)
 
-    print(f"[voice_skill] Log → {LOG_FILE}")
-    print(f"\nGanti voice:")
-    print(f"  Indo female : export TTS_VOICE=alt → edit VOICES['id']['main'] ke 'id-ID-GadisNeural'")
-    print(f"  English     : python voice_skill.py script_output.json en")
-    print(f"  Lebih lambat: export TTS_RATE='-20%'")
+    print(f"[voice] Log     → {LOG_FILE}")
     print("="*55)
 
 

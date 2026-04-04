@@ -1,47 +1,36 @@
-# Output runs — jangan di-push (bisa besar)
-output/
-scenes/
-tmp_edit/
+# --- Frontend (Dashboard) ---
+dashboard/node_modules/
+dashboard/.next/
+dashboard/out/
+dashboard/build/
+dashboard/.vercel/
+dashboard/*.log
 
-# Generated files
-*.mp4
-*.mp3
-*.wav
-*.png
-*_output.json
-*_log.json
-
-# Env & secrets
-.env
-*.key
-
-# Python cache
+# --- Python & System Garbage ---
 __pycache__/
-*.pyc
-*.pyo
-.pytest_cache/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.env
+.DS_Store
+.venv/
+venv/
+pip-log.txt
 
-# Piper binary (besar, download sendiri)
+# --- OpenClaw Heavy Assets (Ignore folder, not files) ---
+# Kita ignore hasil render yang berat agar repo tidak bengkak
+**/output/*/scenes/
+**/output/**/*.mp4
+**/output/**/*.png
+**/output/**/*.mp3
+**/output/**/*.wav
+
+# --- Specific Heavy Binaries ---
 piper/
 
-# OpenClaw project (folder terpisah, tetap di-track)
-# Tapi ignore hasil output-nya
-openclaw/output/
-openclaw/data/queue.json
-openclaw/pipeline.log
-openclaw/__pycache__/
-openclaw/agents/__pycache__/
-openclaw/core/__pycache__/
-openclaw/workers/__pycache__/
-
-# Hasil output dari sistem lama
-output/
-scenes/
-*.mp4
-*.png
-*.mp3
-*.json
-
-# File sementara
-*.log
+# --- Keep Data & Configs (PENTING) ---
+# Jangan ignore .json secara global agar package.json terdeteksi
+# Kita hanya ignore file output/log sementara yang tidak perlu di-dashboard
+variations_output.json
+*_log.json
 

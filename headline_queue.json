@@ -1,0 +1,50 @@
+[
+  {
+    "headline": "Watch Out Bitcoin: Cryptography-Breaking Quantum Computers May Be Closer Than Expected, Says Caltech",
+    "source": "Decrypt",
+    "link": "https://decrypt.co/362988/cryptography-breaking-quantum-computers-closer-expected-caltech-bitcoin",
+    "desc": "Research suggests fault-tolerant quantum machines could arrive sooner than expected, posing a threat to Bitcoin and Ethereum cryptography.",
+    "relevance": 3,
+    "scanned_at": "2026-04-01T09:34:31.736194",
+    "used": true,
+    "processed_at": "2026-04-01T09:42:32.392576",
+    "tone_used": 1,
+    "exit_code": 0
+  },
+  {
+    "headline": "Mercor says it was hit by cyberattack tied to compromise of open-source LiteLLM project",
+    "source": "TechCrunch AI",
+    "link": "https://techcrunch.com/2026/03/31/mercor-says-it-was-hit-by-cyberattack-tied-to-compromise-of-open-source-litellm-project/",
+    "desc": "The AI recruiting startup confirmed a security incident after an extortion hacking crew took credit for stealing data from the company's systems.",
+    "relevance": 2,
+    "scanned_at": "2026-04-01T09:34:30.128925",
+    "used": false
+  },
+  {
+    "headline": "Bitcoin enters the public bond market as Moody’s gives a first-of-its-kind crypto deal a rating",
+    "source": "CoinDesk",
+    "link": "https://www.coindesk.com/markets/2026/03/31/bitcoin-enters-the-public-bond-market-as-moody-s-gives-a-first-of-its-kind-crypto-deal-a-rating",
+    "desc": "A New Hampshire state authority is set to issue a first-of-its-kind bitcoin-backed bond with a Ba2 rating, marking an early test of how crypto can function as collateral inside traditional public finance markets.",
+    "relevance": 2,
+    "scanned_at": "2026-04-01T09:34:31.507758",
+    "used": false
+  },
+  {
+    "headline": "The Pentagon’s culture war tactic against Anthropic has backfired",
+    "source": "MIT Tech Review",
+    "link": "https://www.technologyreview.com/2026/03/30/1134881/the-pentagons-culture-war-tactic-against-anthropic-has-backfired/",
+    "desc": "This story originally appeared in The Algorithm, our weekly newsletter on AI. To get stories like this in your inbox first, sign up here. Last Thursday, a California judge temporarily blocked the Pentagon from labeling Anthropic a supply chain risk and ordering government agencies to stop using its AI. It’s the latest development in the month-long&#8230;",
+    "relevance": 1,
+    "scanned_at": "2026-04-01T09:34:30.967074",
+    "used": false
+  },
+  {
+    "headline": "The Download: brainless human clones and the first uterus kept alive outside a body",
+    "source": "MIT Tech Review",
+    "link": "https://www.technologyreview.com/2026/03/30/1134836/the-download-brainless-human-clones-first-uterus-kept-alive-outside-body/",
+    "desc": "This is today&#8217;s edition of The Download, our weekday newsletter that provides a daily dose of what&#8217;s going on in the world of technology. Inside the stealthy startup that pitched brainless human clones&#160; After&#160;operating&#160;in secrecy for years, R3 Bio, a California-based startup, suddenly revealed last week that it had raised money to create&#160;nonsentient&#160;monkey “org",
+    "relevance": 1,
+    "scanned_at": "2026-04-01T09:34:30.967240",
+    "used": false
+  }
+]

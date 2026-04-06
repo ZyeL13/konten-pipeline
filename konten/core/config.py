@@ -1,5 +1,6 @@
 """
 core/config.py — Single source of truth for all config.
+Priority: Groq API → ClawRouter fallback
 """
 
 import os
@@ -32,15 +33,30 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID   = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 # ── API URLS ──────────────────────────────────────────────────────────────────
-GROQ_URL   = "http://127.0.0.1:8402/v1"
+# Primary: Groq API (has Whisper, better models, but TPD limit)
+GROQ_URL_PRIMARY  = "https://api.groq.com/openai/v1"
+# Fallback: ClawRouter (unlimited free models, no Whisper)
+GROQ_URL_FALLBACK = "http://127.0.0.1:8402/v1"
+# Active URL — used by agents (auto-selected, do not edit manually)
+GROQ_URL          = GROQ_URL_PRIMARY
+
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 # ── MODELS ────────────────────────────────────────────────────────────────────
-GROQ_MODEL         = "free/deepseek-v3.2"
-GROQ_WHISPER_MODEL = "whisper-large-v3-turbo"
+# Groq primary model
+GROQ_MODEL_PRIMARY  = "llama-3.3-70b-versatile"
+# ClawRouter fallback models (in priority order)
+GROQ_MODEL_FALLBACKS = [
+    "free/deepseek-v3.2",
+    "free/mistral-large-3-675b",
+    "free/glm-4.7",
+    "free/llama-4-maverick",
+]
+# Active model
+GROQ_MODEL         = GROQ_MODEL_PRIMARY
+GROQ_WHISPER_MODEL = "whisper-large-v3-turbo"  # Groq only, no fallback
 
 # ── SCRIPT ────────────────────────────────────────────────────────────────────
-# Character is locked to "the auditor" in script_agent.py
 SCRIPT_TEMPERATURE = 0.92
 TARGET_DURATION    = 61
 
@@ -57,8 +73,6 @@ STYLE_PREFIX  = (
     "cinematic dark aesthetic, moody lighting, high contrast, "
     "digital art, 4k quality, no text, no watermark, "
 )
-
-# The auditor visual style — always applied
 AUDITOR_VISUAL_STYLE = (
     "forensic cold light, institutional spaces, long shadows, "
     "grain film texture, no people or blurred background figures only, "
@@ -73,7 +87,7 @@ SUBTITLE_FONT_COLOR = "white"
 SUBTITLE_BOX_COLOR  = "black@0.6"
 
 # ── QC ────────────────────────────────────────────────────────────────────────
-QC_N_FRAMES    = 2
+QC_N_FRAMES    = 1
 QC_FRAME_DELAY = 60
 
 
@@ -81,8 +95,6 @@ def validate():
     missing = []
     if not GROQ_API_KEY:
         missing.append("GROQ_API_KEY")
-    if not GEMINI_API_KEY:
-        missing.append("GEMINI_API_KEY")
     if missing:
         print(f"[config] WARNING: Missing env vars: {', '.join(missing)}")
     return len(missing) == 0

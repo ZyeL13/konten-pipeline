@@ -14,8 +14,8 @@ from agents.script_agent import generate_script, to_script_output
 log = logging.getLogger("worker.script")
 
 MAX_ATTEMPTS    = 3
-MIN_WORDS_TOTAL = 100
-MIN_WORDS_SCENE = 25
+MIN_WORDS_TOTAL = 110
+MIN_WORDS_SCENE = 27
 RETRY_DELAY     = 20  # seconds — Groq rate limit buffer
 
 

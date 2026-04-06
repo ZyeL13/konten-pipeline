@@ -11,7 +11,7 @@ import subprocess
 import time
 from pathlib import Path
 from datetime import datetime
-
+from chain_log import gossip_log
 from core import queue as Q
 from core.config import OUTPUT_DIR
 
@@ -76,6 +76,8 @@ def run_job(job: dict) -> bool:
     Q.update(job_id, run_dir=str(run_dir))
 
     # ── STEP 1: SCRIPT ────────────────────────────────────────────────────────
+    gossip_log("job_start", job_id)
+
     log.info(f"[{job_id}] Step 1/5 — script")
     script_data = run_script(headline=headline, tone=0, run_dir=run_dir)
     if not script_data:
@@ -84,6 +86,7 @@ def run_job(job: dict) -> bool:
         return False
     Q.mark_step(job_id, "script")
 
+    gossip_log("script_complete", job_id)
     # ── STEP 2: VISUAL ────────────────────────────────────────────────────────
     log.info(f"[{job_id}] Step 2/5 — visual")
     visual_ok = run_visual(script_data=script_data, run_dir=run_dir)
@@ -93,6 +96,7 @@ def run_job(job: dict) -> bool:
         return False
     Q.mark_step(job_id, "visual")
 
+    gossip_log("visual_complete", job_id)
     # ── STEP 3: VOICE ─────────────────────────────────────────────────────────
     log.info(f"[{job_id}] Step 3/5 — voice")
     voice_ok = run_voice(script_data=script_data, lang=lang, run_dir=run_dir)
@@ -102,6 +106,7 @@ def run_job(job: dict) -> bool:
         return False
     Q.mark_step(job_id, "voice")
 
+    gossip_log("voice_complete", job_id)
     # ── STEP 4: EDIT ──────────────────────────────────────────────────────────
     log.info(f"[{job_id}] Step 4/5 — edit")
     edit_ok = run_edit(script_data=script_data, run_dir=run_dir)
@@ -111,6 +116,7 @@ def run_job(job: dict) -> bool:
         return False
     Q.mark_step(job_id, "edit")
 
+    gossip_log("edit_complete", job_id)
     # ── COOLDOWN sebelum QC (Gemini rate limit) ───────────────────────────────
     log.info(f"[{job_id}] Waiting 60s before QC...")
     time.sleep(60)
@@ -123,6 +129,7 @@ def run_job(job: dict) -> bool:
     score = _read_qc_score(run_dir)
     log.info(f"[{job_id}] QC score: {score}/10 (threshold: {QC_SCORE_THRESHOLD})")
 
+    gossip_log("qc_complete", job_id)
     # ── AUTO RETRY jika skor rendah ───────────────────────────────────────────
     if score < QC_SCORE_THRESHOLD and score > 0:
         if retry_count >= MAX_RETRIES:
@@ -156,6 +163,7 @@ def run_job(job: dict) -> bool:
     Q.mark_done(job_id)
     log.info(f"[{job_id}] DONE → {run_dir.name}  score={score}/10")
 
+    gossip_log("job_done", job_id)
     _trigger_kirim(run_dir, job_id)
     return True
 

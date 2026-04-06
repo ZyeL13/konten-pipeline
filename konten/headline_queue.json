@@ -1,47 +1,47 @@
 [
   {
-    "headline": "Shifting to AI model customization is an architectural imperative",
+    "headline": "The Download: AI health tools and the Pentagon’s Anthropic culture war",
     "source": "MIT Tech Review",
-    "link": "https://www.technologyreview.com/2026/03/31/1134762/shifting-to-ai-model-customization-is-an-architectural-imperative/",
-    "desc": "In the early days of large language models (LLMs), we grew accustomed to massive 10x jumps in reasoning and coding capability with every new model iteration. Today, those jumps have flattened into incremental gains. The exception is domain-specialized intelligence, where true step-function improvements are still the norm. When a model is fused with an organization’s&#8230;",
-    "relevance": 3,
-    "scanned_at": "2026-04-05T11:01:55.600126",
-    "used": false
-  },
-  {
-    "headline": "Anthropic is having a moment in the private markets; SpaceX could spoil the party",
-    "source": "TechCrunch AI",
-    "link": "https://techcrunch.com/2026/04/03/anthropic-is-having-a-moment-in-the-private-markets-spacex-could-spoil-the-party/",
-    "desc": "Glen Anderson, president of Rainmaker Securities, says the secondary market for private shares has never been more active — with Anthropic the hottest trade around, OpenAI losing ground, and SpaceX's looming IPO poised to reshape the landscape for everyone.",
+    "link": "https://www.technologyreview.com/2026/03/31/1134934/the-download-testing-ai-health-tools-pentagon-anthropic-culture-war-backfires/",
+    "desc": "This is today&#8217;s edition of The Download, our weekday newsletter that provides a daily dose of what&#8217;s going on in the world of technology. There are more AI health tools than ever—but how well do they work?&#160; In the last few months alone, Microsoft, Amazon, and OpenAI have all launched medical chatbots.&#160; There’s&#160;a clear demand&#8230;",
     "relevance": 2,
-    "scanned_at": "2026-04-05T11:01:54.762184",
+    "scanned_at": "2026-04-06T16:15:54.148436",
     "used": false
   },
   {
-    "headline": "Anthropic buys biotech startup Coefficient Bio in $400M deal: Reports",
-    "source": "TechCrunch AI",
-    "link": "https://techcrunch.com/2026/04/03/anthropic-buys-biotech-startup-coefficient-bio-in-400m-deal-reports/",
-    "desc": "Anthropic has purchased the stealth biotech AI startup Coefficient Bio in a $400 million stock deal, according to The Information and Eric Newcomer.",
+    "headline": "AI benchmarks are broken. Here’s what we need instead.",
+    "source": "MIT Tech Review",
+    "link": "https://www.technologyreview.com/2026/03/31/1134833/ai-benchmarks-are-broken-heres-what-we-need-instead/",
+    "desc": "For decades, artificial intelligence has been evaluated through the question of whether machines outperform humans. From chess to advanced math, from coding to essay writing, the performance of AI models and applications is tested against that of individual humans completing tasks.&#160; This framing is seductive: An AI vs. human comparison on isolated problems with clear&#8230;",
     "relevance": 2,
-    "scanned_at": "2026-04-05T11:01:54.762366",
+    "scanned_at": "2026-04-06T16:15:54.148614",
     "used": false
   },
   {
-    "headline": "OpenAI executive shuffle includes new role for COO Brad Lightcap to lead ‘special projects’",
-    "source": "TechCrunch AI",
-    "link": "https://techcrunch.com/2026/04/03/openai-executive-shuffle-new-roles-coo-brad-lightcap-fidji-simo-kate-rouch/",
-    "desc": "In addition to Lightcap's new role, OpenAI CMO Kate Rouch will be stepping away from the company to focus on cancer recovery, with a plan to return when her health allows.",
-    "relevance": 1,
-    "scanned_at": "2026-04-05T11:01:54.762301",
+    "headline": "Bitcoin reclaims $69,000 as ceasefire talks surface and crypto shorts get squeezed",
+    "source": "CoinDesk",
+    "link": "https://www.coindesk.com/markets/2026/04/06/bitcoin-reclaims-usd69-000-as-ceasefire-talks-surface-and-crypto-shorts-get-squeezed",
+    "desc": "A report that the U.S. and Iran are discussing a 45-day ceasefire lifted risk assets across the board on Monday, with short liquidations outpacing longs nearly 3-to-1 in the past 12 hours.",
+    "relevance": 2,
+    "scanned_at": "2026-04-06T16:15:54.893452",
     "used": false
   },
   {
-    "headline": "Anthropic ramps up its political activities with a new PAC",
-    "source": "TechCrunch AI",
-    "link": "https://techcrunch.com/2026/04/03/anthropic-ramps-up-its-political-activities-with-a-new-pac/",
-    "desc": "With the midterms right around the corner, the new group is positioned to back candidates who support the AI company's policy agenda.",
+    "headline": "Claude Code users hitting usage limits 'way faster than expected'",
+    "source": "BBC Tech",
+    "link": "https://www.bbc.com/news/articles/ce8l2q5yq51o?at_medium=RSS&at_campaign=rss",
+    "desc": "Anthropic, the company behind the AI coding assistant, said it was fixing a problem blocking users.",
     "relevance": 1,
-    "scanned_at": "2026-04-05T11:01:54.762420",
+    "scanned_at": "2026-04-06T16:15:54.557677",
+    "used": false
+  },
+  {
+    "headline": "Mass robotaxi malfunction halts traffic in Chinese city",
+    "source": "BBC Tech",
+    "link": "https://www.bbc.com/news/articles/cvge91r9j80o?at_medium=RSS&at_campaign=rss",
+    "desc": "Baidu has not responded to a request for comment about the outage, which affected at least 100 cars.",
+    "relevance": 1,
+    "scanned_at": "2026-04-06T16:15:54.557745",
     "used": false
   }
 ]

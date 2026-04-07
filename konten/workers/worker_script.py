@@ -14,9 +14,9 @@ from agents.script_agent import generate_script, to_script_output
 log = logging.getLogger("worker.script")
 
 MAX_ATTEMPTS    = 3
-MIN_WORDS_TOTAL = 110
-MIN_WORDS_SCENE = 27
-RETRY_DELAY     = 20  # seconds — Groq rate limit buffer
+MIN_WORDS_TOTAL = 90
+MIN_WORDS_SCENE = 22
+RETRY_DELAY     = 20
 
 
 def validate_word_count(script_data: dict) -> tuple[bool, str]:
@@ -79,9 +79,18 @@ def run(headline: str, tone: int, run_dir: Path) -> dict | None:
     if best_words < MIN_WORDS_TOTAL:
         log.warning(f"Using best available: {best_words} words (below target)")
 
+    # ========== TAMBAHAN: REFINE SCRIPT (FIX TYPO) ==========
+    try:
+        from agents.refiner_agent import refine_script
+        log.info("Refining script (fixing typos, spacing)...")
+        best = refine_script(best)
+        log.info("Refinement done")
+    except Exception as e:
+        log.warning(f"Refinement skipped: {e}")
+    # ========== END TAMBAHAN ==========
+
     with open(script_file, "w", encoding="utf-8") as f:
         json.dump(best, f, ensure_ascii=False, indent=2)
 
     log.info(f"Saved → {script_file.name}  words={best_words}")
     return best
-

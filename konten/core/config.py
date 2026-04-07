@@ -57,7 +57,7 @@ GROQ_MODEL         = GROQ_MODEL_PRIMARY
 GROQ_WHISPER_MODEL = "whisper-large-v3-turbo"  # Groq only, no fallback
 
 # ── SCRIPT ────────────────────────────────────────────────────────────────────
-SCRIPT_TEMPERATURE = 0.92
+SCRIPT_TEMPERATURE = 0.69
 TARGET_DURATION    = 61
 
 # ── VOICE ─────────────────────────────────────────────────────────────────────
@@ -90,6 +90,11 @@ SUBTITLE_BOX_COLOR  = "black@0.6"
 QC_N_FRAMES    = 1
 QC_FRAME_DELAY = 60
 
+
+# ── CHARACTER OVERLAY ─────────────────────────────────────────────────────────
+CHAR_SCALE    = 220      # character width in pixels
+CHAR_OPACITY  = 0.95     # 0.0 = invisible, 1.0 = fully opaque
+CHAR_POSITION = "bottom-left"  # bottom-left | bottom-right | top-left | top-right
 
 def validate():
     missing = []

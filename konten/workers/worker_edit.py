@@ -1,7 +1,6 @@
 """
-workers/worker_edit.py — Edit worker.
-Handles temp dir, file paths, logging.
-Calls edit_agent for pure FFmpeg logic.
+workers/worker_edit.py — Edit worker with emotion-based character overlay.
+Proportional subtitle timing. Config-driven overlay settings.
 """
 
 import logging
@@ -10,17 +9,21 @@ from pathlib import Path
 
 from agents.edit_agent import (
     get_audio_duration, make_scene_clip,
-    concat_clips, add_audio, add_subtitles
+    concat_clips, add_audio, add_subtitles,
+    add_character_overlay_blended
+)
+from agents.refiner_agent import get_asset_for_emotion
+from core.config import (
+    CHAR_SCALE, CHAR_OPACITY, CHAR_POSITION,
+    VIDEO_WIDTH, VIDEO_HEIGHT
 )
 
 log = logging.getLogger("worker.edit")
 
+ASSETS_DIR = Path(__file__).parent.parent / "assets" / "auditor"
+
 
 def run(script_data: dict, run_dir: Path) -> bool:
-    """
-    Assemble final video from scenes + voice.
-    Returns True on success.
-    """
     scenes_dir  = run_dir / "scenes"
     voice_file  = run_dir / "voice.mp3"
     output_file = run_dir / "final_video.mp4"
@@ -29,7 +32,7 @@ def run(script_data: dict, run_dir: Path) -> bool:
 
     scenes = script_data.get("scenes", [])
 
-    # ── Validate assets ───────────────────────────────────────────────────────
+    # ── Validate ──────────────────────────────────────────────────────────────
     missing = []
     for s in scenes:
         p = scenes_dir / f"scene_{s['id']}.png"
@@ -42,24 +45,30 @@ def run(script_data: dict, run_dir: Path) -> bool:
         shutil.rmtree(tmp_dir, ignore_errors=True)
         return False
 
-    # ── Get audio duration ────────────────────────────────────────────────────
+    # ── Audio duration ────────────────────────────────────────────────────────
     audio_dur = get_audio_duration(str(voice_file))
-    log.info(f"Audio duration: {audio_dur:.1f}s  Scenes: {len(scenes)}")
+    log.info(f"Audio: {audio_dur:.1f}s  Scenes: {len(scenes)}")
 
-    # ── Step 1: Make scene clips ──────────────────────────────────────────────
-    log.info("Step 1/4 — scene clips (Ken Burns)")
+    # ── Proportional scene durations by word count ────────────────────────────
+    scene_words = [len(s.get("text", "").split()) for s in scenes]
+    total_words = sum(scene_words) or len(scenes)
+    scene_durs  = [audio_dur * (w / total_words) for w in scene_words]
+    log.info(f"Scene durations: {[round(d,1) for d in scene_durs]}")
+
+    # ── Step 1: Scene clips ───────────────────────────────────────────────────
+    log.info("Step 1/5 — scene clips (Ken Burns)")
     clip_paths = []
-    per_scene  = audio_dur / len(scenes)
 
-    for scene in scenes:
+    for i, scene in enumerate(scenes):
         sid      = scene["id"]
         img_path = str(scenes_dir / f"scene_{sid}.png")
         out_path = str(tmp_dir / f"clip_{sid}.mp4")
+        dur      = scene_durs[i]
 
-        ok = make_scene_clip(img_path, per_scene, out_path)
+        ok = make_scene_clip(img_path, dur, out_path)
         if ok:
             clip_paths.append(out_path)
-            log.info(f"  clip_{sid}.mp4 ({per_scene:.1f}s)")
+            log.info(f"  clip_{sid}.mp4 ({dur:.1f}s)")
         else:
             log.warning(f"  clip_{sid} failed — skipping")
 
@@ -69,7 +78,7 @@ def run(script_data: dict, run_dir: Path) -> bool:
         return False
 
     # ── Step 2: Concat ────────────────────────────────────────────────────────
-    log.info("Step 2/4 — concat clips")
+    log.info("Step 2/5 — concat")
     list_file   = str(tmp_dir / "clips.txt")
     concat_path = str(tmp_dir / "concat.mp4")
 
@@ -79,7 +88,7 @@ def run(script_data: dict, run_dir: Path) -> bool:
         return False
 
     # ── Step 3: Add audio ─────────────────────────────────────────────────────
-    log.info("Step 3/4 — add voice")
+    log.info("Step 3/5 — add voice")
     with_audio = str(tmp_dir / "with_audio.mp4")
 
     if not add_audio(concat_path, str(voice_file), with_audio):
@@ -87,20 +96,62 @@ def run(script_data: dict, run_dir: Path) -> bool:
         shutil.rmtree(tmp_dir, ignore_errors=True)
         return False
 
-    # ── Step 4: Burn subtitles ────────────────────────────────────────────────
-    log.info("Step 4/4 — burn subtitles")
-    ok = add_subtitles(with_audio, scenes, audio_dur, str(output_file))
+    # ── Step 4: Subtitles (proportional timing) ───────────────────────────────
+    log.info("Step 4/5 — burn subtitles (proportional timing)")
+    with_subtitle = str(tmp_dir / "with_subtitle.mp4")
 
+    ok = add_subtitles(with_audio, scenes, audio_dur, with_subtitle,
+                       scene_durs=scene_durs)
     if not ok:
-        log.warning("Subtitle burn failed — copying without subtitles")
-        shutil.copy(with_audio, str(output_file))
+        log.warning("Subtitle failed — using no-subtitle version")
+        shutil.copy(with_audio, with_subtitle)
 
-    shutil.rmtree(tmp_dir, ignore_errors=True)
+    # ── Step 5: Character overlay (emotion-based) ─────────────────────────────
+    log.info("Step 5/5 — character overlay")
+
+    if not ASSETS_DIR.exists():
+        log.warning(f"Assets dir not found: {ASSETS_DIR} — skipping overlay")
+        shutil.move(with_subtitle, str(output_file))
+    else:
+        final_path = str(output_file)
+        prev_path  = with_subtitle
+
+        for i, scene in enumerate(scenes):
+            emotion    = scene.get("emotion", "neutral")
+            asset_path = get_asset_for_emotion(emotion, str(ASSETS_DIR))
+
+            if not asset_path:
+                log.warning(f"  scene_{scene['id']}: no asset for '{emotion}' — skipping")
+                continue
+
+            # Each scene clip gets its own overlay pass
+            # For simplicity: apply overlay to full video using first scene emotion
+            # Full per-scene overlay would require splitting/merging again
+            log.info(f"  Using emotion '{emotion}' → {Path(asset_path).name}")
+            break  # Use first scene's emotion for whole video (simple approach)
+
+        if asset_path:
+            ok = add_character_overlay_blended(
+                with_subtitle,
+                asset_path,
+                final_path,
+                position = CHAR_POSITION,
+                scale    = CHAR_SCALE,
+                opacity  = CHAR_OPACITY
+            )
+            if ok:
+                log.info(f"  Overlay added: {Path(asset_path).name}")
+            else:
+                log.warning("  Overlay failed — using subtitle-only")
+                shutil.move(with_subtitle, final_path)
+        else:
+            shutil.move(with_subtitle, final_path)
 
     if output_file.exists():
         size_mb = output_file.stat().st_size / (1024 * 1024)
-        log.info(f"final_video.mp4 ({size_mb:.1f} MB  {audio_dur:.1f}s)")
+        log.info(f"final_video.mp4 ({size_mb:.1f}MB  {audio_dur:.1f}s)")
         return True
 
     log.error("final_video.mp4 not created")
     return False
+

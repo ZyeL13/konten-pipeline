@@ -1,6 +1,6 @@
 """
 agents/edit_agent.py — Pure FFmpeg video assembly logic.
-No file I/O decisions. No logging.
+FIXED: Match function names for worker_edit.py and removed ghost blur.
 """
 
 import re
@@ -43,123 +43,112 @@ def make_scene_clip(img_path: str, duration: float, out_path: str) -> bool:
         "-loop", "1", "-i", img_path,
         "-vf", vf,
         "-t", str(duration),
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        out_path
-    ]
-    result = subprocess.run(cmd, capture_output=True, timeout=120)
-    return result.returncode == 0
-
-
-def concat_clips(clip_paths: list, list_file: str, out_path: str) -> bool:
-    with open(list_file, "w") as f:
-        for p in clip_paths:
-            f.write(f"file '{Path(p).resolve()}'\n")
-
-    cmd = [
-        "ffmpeg", "-y",
-        "-f", "concat", "-safe", "0",
-        "-i", list_file,
-        "-c", "copy", out_path
-    ]
-    result = subprocess.run(cmd, capture_output=True, timeout=60)
-    return result.returncode == 0
-
-
-def add_audio(video_path: str, audio_path: str, out_path: str) -> bool:
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", video_path, "-i", audio_path,
-        "-c:v", "copy", "-c:a", "aac", "-b:a", "128k",
-        "-shortest", out_path
-    ]
-    result = subprocess.run(cmd, capture_output=True, timeout=60)
-    return result.returncode == 0
-
-
-def _clean_subtitle(text: str, max_chars: int = 24) -> str:
-    """
-    Clean and wrap subtitle text for FFmpeg drawtext.
-    max_chars=24 — safe limit for 720px frame at fontsize 28.
-    """
-    # Step 1: Remove non-standard chars early
-    text = re.sub(r'[^\w\s,.\-!?]', ' ', text)
-
-    # Step 2: Fix CamelCase stuck words: "likeTectonic" → "like Tectonic"
-    text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
-
-    # Step 3: Fix number + letter: "4732years" → "4732 years"
-    text = re.sub(r'(\d)([a-zA-Z])', r'\1 \2', text)
-    text = re.sub(r'([a-zA-Z])(\d)', r'\1 \2', text)
-
-    # Step 4: Fix common words stuck to next word
-    # "nodesnare" → "nodes are", "ofntransactions" → "of transactions"
-    stuck_words = [
-        "are", "is", "of", "on", "in", "the", "and", "but",
-        "for", "to", "at", "by", "or", "not", "its", "has",
-        "was", "been", "each", "this", "that", "with", "from"
-    ]
-    for word in stuck_words:
-        # word stuck at end: "nodes" + "are" → "nodes are"
-        text = re.sub(rf'([a-z])({word})\b', rf'\1 \2', text)
-        # word stuck at start: "of" + "ntransactions" → handled by below
-        text = re.sub(rf'\b({word})([a-z])', rf'\1 \2', text)
-
-    # Step 5: Remove FFmpeg drawtext special chars
-    for ch in ["'", ":", "[", "]", "\\", "\n", "\r"]:
-        text = text.replace(ch, " ")
-
-    # Step 6: Collapse multiple spaces
-    text = " ".join(text.split())
-
-    # Step 7: Wrap at max_chars — word boundary only, max 2 lines
-    lines = textwrap.wrap(text, width=max_chars)
-    return "\\n".join(lines[:2])
-
-
-def add_subtitles(video_path: str, scenes: list, audio_duration: float, out_path: str) -> bool:
-    total_scenes = len(scenes)
-    scene_dur    = audio_duration / total_scenes
-    filters      = []
-
-    for i, scene in enumerate(scenes):
-        start    = i * scene_dur
-        end      = start + scene_dur - 0.3
-        raw_text = scene.get("text", "")
-        if not raw_text:
-            continue
-
-        text = _clean_subtitle(raw_text)
-
-        filters.append(
-            f"drawtext=text='{text}':"
-            f"fontsize={SUBTITLE_FONT_SIZE}:"
-            f"fontcolor={SUBTITLE_FONT_COLOR}:"
-            f"borderw=2:bordercolor=black:"
-            f"box=1:boxcolor={SUBTITLE_BOX_COLOR}:boxborderw=12:"
-            f"x=max(20\\,(w-text_w)/2):"    # centered, min 20px margin
-            f"y=h*0.72-text_h:"
-            f"line_spacing=6:"
-            f"enable='between(t,{start:.2f},{end:.2f})'"
-        )
-
-    vf = ",".join(filters) if filters else "null"
-    cmd = [
-        "ffmpeg", "-y", "-i", video_path,
-        "-vf", vf,
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "copy", out_path
-    ]
-    result = subprocess.run(cmd, capture_output=True, timeout=180)
-    return result.returncode == 0
-
-
-def upgrade_audio_quality(mp3_path: str, out_path: str) -> bool:
-    cmd = [
-        "ffmpeg", "-y", "-i", mp3_path,
-        "-codec:a", "libmp3lame",
-        "-b:a", "128k", "-ac", "2", "-ar", "44100",
         out_path
     ]
     result = subprocess.run(cmd, capture_output=True)
     return result.returncode == 0
 
+
+def add_subtitles(video_path: str, text: str, out_path: str) -> bool:
+    wrapper = textwrap.TextWrapper(width=32)
+    lines   = wrapper.wrap(text)
+    clean   = "\n".join(lines).replace("'", "'\\''").replace(":", "\\:")
+
+    # H-h-180 supaya teks tidak tertutup kaki Auditor
+    vf = (
+        f"drawtext=text='{clean}':fontcolor={SUBTITLE_FONT_COLOR}:"
+        f"fontsize={SUBTITLE_FONT_SIZE}:x=(w-text_w)/2:y=(h-text_h)-180:"
+        f"box=1:boxcolor={SUBTITLE_BOX_COLOR}@0.6:boxborderw=15"
+    )
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", video_path,
+        "-vf", vf,
+        "-c:a", "copy",
+        out_path
+    ]
+    result = subprocess.run(cmd, capture_output=True)
+    return result.returncode == 0
+
+
+def concat_clips(clip_paths: list, list_file: str, out_path: str) -> bool:
+    """
+    Menggabungkan klip video.
+    Menerima 3 argumen sesuai kebutuhan worker_edit.py
+    """
+    if not clip_paths:
+        return False
+    
+    txt_path = Path(list_file)
+    with txt_path.open("w") as f:
+        for p in clip_paths:
+            # Pastikan path absolut biar FFmpeg gak bingung di Termux
+            f.write(f"file '{Path(p).absolute()}'\n")
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-f", "concat", "-safe", "0",
+        "-i", str(txt_path),
+        "-c", "copy",
+        out_path
+    ]
+    
+    result = subprocess.run(cmd, capture_output=True)
+    
+    # Hapus file list sementara setelah dipake
+    if txt_path.exists():
+        txt_path.unlink()
+        
+    return result.returncode == 0
+
+
+
+def add_audio(video_path: str, audio_path: str, out_path: str) -> bool:
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", video_path,
+        "-i", audio_path,
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-map", "0:v:0",
+        "-map", "1:a:0",
+        "-shortest",
+        out_path
+    ]
+    result = subprocess.run(cmd, capture_output=True)
+    return result.returncode == 0
+
+
+def add_character_overlay_blended(video_path: str, character_path: str, out_path: str,
+                                   position: str = "bottom-left", scale: int = 500,
+                                   feather: int = 0, opacity: float = 1.0) -> bool:
+    """
+    FIXED: Nama fungsi disamakan dengan worker_edit.py.
+    Removed gblur to ensure sharp visuals.
+    """
+    if position == "bottom-left":
+        x_pos, y_pos = "30", "H-h-30"
+    elif position == "bottom-right":
+        x_pos, y_pos = "W-w-30", "H-h-30"
+    else:
+        x_pos, y_pos = "30", "30"
+    
+    # Filter tanpa gblur
+    filter_complex = (
+        f"[1:v]scale={scale}:-1,format=rgba,"
+        f"colorchannelmixer=aa={opacity}[char];"
+        f"[0:v][char]overlay={x_pos}:{y_pos}:format=auto"
+    )
+    
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", video_path,
+        "-i", character_path,
+        "-filter_complex", filter_complex,
+        "-c:a", "copy",
+        out_path
+    ]
+    
+    result = subprocess.run(cmd, capture_output=True, timeout=60)
+    return result.returncode == 0

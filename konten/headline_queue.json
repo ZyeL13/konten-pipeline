@@ -1,47 +1,47 @@
 [
   {
-    "headline": "The Download: AI health tools and the Pentagon’s Anthropic culture war",
-    "source": "MIT Tech Review",
-    "link": "https://www.technologyreview.com/2026/03/31/1134934/the-download-testing-ai-health-tools-pentagon-anthropic-culture-war-backfires/",
-    "desc": "This is today&#8217;s edition of The Download, our weekday newsletter that provides a daily dose of what&#8217;s going on in the world of technology. There are more AI health tools than ever—but how well do they work?&#160; In the last few months alone, Microsoft, Amazon, and OpenAI have all launched medical chatbots.&#160; There’s&#160;a clear demand&#8230;",
+    "headline": "OpenAI alums have been quietly investing from a new, potentially $100M fund",
+    "source": "TechCrunch AI",
+    "link": "https://techcrunch.com/2026/04/06/openai-alums-have-been-quietly-investing-from-a-new-potentially-100m-fund/",
+    "desc": "Zero Shot, a new venture capital fund with deep ties to OpenAI, is aiming to raise $100 million for its first fund. It has already written some checks.",
     "relevance": 2,
-    "scanned_at": "2026-04-06T16:15:54.148436",
+    "scanned_at": "2026-04-07T22:00:47.514494",
     "used": false
   },
   {
-    "headline": "AI benchmarks are broken. Here’s what we need instead.",
-    "source": "MIT Tech Review",
-    "link": "https://www.technologyreview.com/2026/03/31/1134833/ai-benchmarks-are-broken-heres-what-we-need-instead/",
-    "desc": "For decades, artificial intelligence has been evaluated through the question of whether machines outperform humans. From chess to advanced math, from coding to essay writing, the performance of AI models and applications is tested against that of individual humans completing tasks.&#160; This framing is seductive: An AI vs. human comparison on isolated problems with clear&#8230;",
+    "headline": "OpenAI’s vision for the AI economy: public wealth funds, robot taxes, and a four-day workweek",
+    "source": "TechCrunch AI",
+    "link": "https://techcrunch.com/2026/04/06/openais-vision-for-the-ai-economy-public-wealth-funds-robot-taxes-and-a-four-day-work-week/",
+    "desc": "OpenAI proposes taxes on AI profits, public wealth funds, and expanded safety nets to address job loss and inequality, blending redistribution with capitalism as policymakers debate AI’s economic impact.",
     "relevance": 2,
-    "scanned_at": "2026-04-06T16:15:54.148614",
+    "scanned_at": "2026-04-07T22:00:47.514715",
     "used": false
   },
   {
-    "headline": "Bitcoin reclaims $69,000 as ceasefire talks surface and crypto shorts get squeezed",
-    "source": "CoinDesk",
-    "link": "https://www.coindesk.com/markets/2026/04/06/bitcoin-reclaims-usd69-000-as-ceasefire-talks-surface-and-crypto-shorts-get-squeezed",
-    "desc": "A report that the U.S. and Iran are discussing a 45-day ceasefire lifted risk assets across the board on Monday, with short liquidations outpacing longs nearly 3-to-1 in the past 12 hours.",
-    "relevance": 2,
-    "scanned_at": "2026-04-06T16:15:54.893452",
-    "used": false
-  },
-  {
-    "headline": "Claude Code users hitting usage limits 'way faster than expected'",
-    "source": "BBC Tech",
-    "link": "https://www.bbc.com/news/articles/ce8l2q5yq51o?at_medium=RSS&at_campaign=rss",
-    "desc": "Anthropic, the company behind the AI coding assistant, said it was fixing a problem blocking users.",
+    "headline": "The AI gold rush is pulling private wealth into riskier, earlier bets",
+    "source": "TechCrunch AI",
+    "link": "https://techcrunch.com/2026/04/07/the-ai-gold-rush-is-pulling-private-wealth-into-riskier-earlier-bets/",
+    "desc": "On a recent episode of Equity, we  talked to Arena Private Wealth to explore a growing trend: family offices bypassing VCs to gain direct exposure to AI startups, turning them from passive investors into active participants.",
     "relevance": 1,
-    "scanned_at": "2026-04-06T16:15:54.557677",
+    "scanned_at": "2026-04-07T22:00:47.514322",
     "used": false
   },
   {
-    "headline": "Mass robotaxi malfunction halts traffic in Chinese city",
-    "source": "BBC Tech",
-    "link": "https://www.bbc.com/news/articles/cvge91r9j80o?at_medium=RSS&at_campaign=rss",
-    "desc": "Baidu has not responded to a request for comment about the outage, which affected at least 100 cars.",
+    "headline": "AI startup Rocket offers vibe McKinsey-style reports at a fraction of the cost",
+    "source": "TechCrunch AI",
+    "link": "https://techcrunch.com/2026/04/06/indian-startup-rocket-wants-its-ai-to-do-mckinsey-style-consulting-at-a-fraction-of-the-cost/",
+    "desc": "Rocket's new AI platform combines strategy, product building, and competitive intelligence, aiming to move beyond code generation.",
     "relevance": 1,
-    "scanned_at": "2026-04-06T16:15:54.557745",
+    "scanned_at": "2026-04-07T22:00:47.514435",
+    "used": false
+  },
+  {
+    "headline": "Google quietly launched an AI dictation app that works offline",
+    "source": "TechCrunch AI",
+    "link": "https://techcrunch.com/2026/04/06/google-quietly-releases-an-offline-first-ai-dictation-app-on-ios/",
+    "desc": "Google's new offline-first dictation app uses Gemma AI models to take on the apps like Wispr Flow.",
+    "relevance": 1,
+    "scanned_at": "2026-04-07T22:00:47.514546",
     "used": false
   }
 ]

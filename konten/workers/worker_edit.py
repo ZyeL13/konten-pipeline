@@ -23,6 +23,11 @@ log = logging.getLogger("worker.edit")
 ASSETS_DIR = Path(__file__).parent.parent / "assets" / "auditor"
 
 
+def _get_scene_id(scene: dict, idx: int) -> int:
+    """Extract scene ID from either 'id' or 'scene' key."""
+    return scene.get('id', scene.get('scene', idx + 1))
+
+
 def run(script_data: dict, run_dir: Path) -> bool:
     scenes_dir  = run_dir / "scenes"
     voice_file  = run_dir / "voice.mp3"
@@ -34,8 +39,9 @@ def run(script_data: dict, run_dir: Path) -> bool:
 
     # ── Validate ──────────────────────────────────────────────────────────────
     missing = []
-    for s in scenes:
-        p = scenes_dir / f"scene_{s['id']}.png"
+    for idx, s in enumerate(scenes):
+        sid = _get_scene_id(s, idx)
+        p = scenes_dir / f"scene_{sid}.png"
         if not p.exists():
             missing.append(str(p))
     if not voice_file.exists():
@@ -60,7 +66,7 @@ def run(script_data: dict, run_dir: Path) -> bool:
     clip_paths = []
 
     for i, scene in enumerate(scenes):
-        sid      = scene["id"]
+        sid = _get_scene_id(scene, i)
         img_path = str(scenes_dir / f"scene_{sid}.png")
         out_path = str(tmp_dir / f"clip_{sid}.mp4")
         dur      = scene_durs[i]
@@ -114,21 +120,14 @@ def run(script_data: dict, run_dir: Path) -> bool:
         shutil.move(with_subtitle, str(output_file))
     else:
         final_path = str(output_file)
-        prev_path  = with_subtitle
+        asset_path = None
 
         for i, scene in enumerate(scenes):
             emotion    = scene.get("emotion", "neutral")
             asset_path = get_asset_for_emotion(emotion, str(ASSETS_DIR))
-
-            if not asset_path:
-                log.warning(f"  scene_{scene['id']}: no asset for '{emotion}' — skipping")
-                continue
-
-            # Each scene clip gets its own overlay pass
-            # For simplicity: apply overlay to full video using first scene emotion
-            # Full per-scene overlay would require splitting/merging again
-            log.info(f"  Using emotion '{emotion}' → {Path(asset_path).name}")
-            break  # Use first scene's emotion for whole video (simple approach)
+            if asset_path:
+                log.info(f"  Using emotion '{emotion}' → {Path(asset_path).name}")
+                break  # Use first available emotion's asset
 
         if asset_path:
             ok = add_character_overlay_blended(
@@ -145,6 +144,7 @@ def run(script_data: dict, run_dir: Path) -> bool:
                 log.warning("  Overlay failed — using subtitle-only")
                 shutil.move(with_subtitle, final_path)
         else:
+            log.warning("  No asset found for any emotion — skipping overlay")
             shutil.move(with_subtitle, final_path)
 
     if output_file.exists():
@@ -154,4 +154,3 @@ def run(script_data: dict, run_dir: Path) -> bool:
 
     log.error("final_video.mp4 not created")
     return False
-

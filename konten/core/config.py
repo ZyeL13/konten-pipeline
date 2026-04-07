@@ -1,6 +1,6 @@
 """
 core/config.py — Single source of truth for all config.
-Priority: Groq API → ClawRouter fallback
+Priority (2026-04-07): ClawRouter (free/deepseek-v3.2) → Groq fallback
 """
 
 import os
@@ -33,31 +33,42 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID   = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 # ── API URLS ──────────────────────────────────────────────────────────────────
-# Primary: Groq API (has Whisper, better models, but TPD limit)
-GROQ_URL_PRIMARY  = "https://api.groq.com/openai/v1"
-# Fallback: ClawRouter (unlimited free models, no Whisper)
-GROQ_URL_FALLBACK = "http://127.0.0.1:8402/v1"
+# Primary: ClawRouter (unlimited free models, better for script length)
+GROQ_URL_PRIMARY  = "http://127.0.0.1:8402/v1"   # ClawRouter local
+# Fallback: Groq API (has Whisper, better models, but TPD limit & too concise)
+GROQ_URL_FALLBACK = "https://api.groq.com/openai/v1"
 # Active URL — used by agents (auto-selected, do not edit manually)
 GROQ_URL          = GROQ_URL_PRIMARY
 
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 # ── MODELS ────────────────────────────────────────────────────────────────────
-# Groq primary model
-GROQ_MODEL_PRIMARY  = "llama-3.3-70b-versatile"
-# ClawRouter fallback models (in priority order)
-GROQ_MODEL_FALLBACKS = [
-    "free/deepseek-v3.2",
-    "free/mistral-large-3-675b",
-    "free/glm-4.7",
-    "free/llama-4-maverick",
-]
-# Active model
-GROQ_MODEL         = GROQ_MODEL_PRIMARY
-GROQ_WHISPER_MODEL = "whisper-large-v3-turbo"  # Groq only, no fallback
+# Script generation: PRIMARY = ClawRouter (produces ~124 words, ideal range)
+GROQ_MODEL_PRIMARY = "free/deepseek-v3.2"
 
-# ── SCRIPT ────────────────────────────────────────────────────────────────────
-SCRIPT_TEMPERATURE = 0.69
+# QC/Refiner: tetap gunakan Groq (unggul dalam perbaikan teknis/typo)
+GROQ_MODEL_QC = "llama-3.3-70b-versatile"
+
+# Fallback chain for script generation (if ClawRouter primary fails)
+GROQ_MODEL_FALLBACKS = [
+    "llama-3.3-70b-versatile",     # Groq API fallback (indeks 0)
+    "free/mistral-large-3-675b",   # Secondary ClawRouter
+    "free/glm-4.7",                # Tertiary ClawRouter
+]
+
+# Active model for general use (script generation)
+GROQ_MODEL = GROQ_MODEL_PRIMARY
+
+# Whisper tetap via Groq (ClawRouter tidak punya ASR)
+GROQ_WHISPER_MODEL = "whisper-large-v3-turbo"
+
+# ── VALIDATION THRESHOLDS ─────────────────────────────────────────────────────
+SCRIPT_MIN_WORDS_TOTAL = 110   # Target ideal 125-145, batas aman minimal 110
+SCRIPT_MIN_WORDS_SCENE = 25    # Minimal kata per adegan
+SCRIPT_TARGET_WORDS = 125      # Target ideal total kata
+
+# ── SCRIPT GENERATION ─────────────────────────────────────────────────────────
+SCRIPT_TEMPERATURE = 0.7
 TARGET_DURATION    = 61
 
 # ── VOICE ─────────────────────────────────────────────────────────────────────
@@ -90,7 +101,6 @@ SUBTITLE_BOX_COLOR  = "black@0.6"
 QC_N_FRAMES    = 1
 QC_FRAME_DELAY = 60
 
-
 # ── CHARACTER OVERLAY ─────────────────────────────────────────────────────────
 CHAR_SCALE    = 220      # character width in pixels
 CHAR_OPACITY  = 0.95     # 0.0 = invisible, 1.0 = fully opaque
@@ -103,4 +113,3 @@ def validate():
     if missing:
         print(f"[config] WARNING: Missing env vars: {', '.join(missing)}")
     return len(missing) == 0
-

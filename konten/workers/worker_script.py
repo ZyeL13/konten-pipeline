@@ -1,96 +1,88 @@
 """
-workers/worker_script.py — Script worker.
-Handles retries, file saving, logging.
+workers/worker_script.py — Worker untuk eksekusi script generation.
 """
 
 import json
 import logging
 import time
 from pathlib import Path
-from datetime import datetime
-
 from agents.script_agent import generate_script, to_script_output
+from core.config import SCRIPT_MIN_WORDS_TOTAL, SCRIPT_MIN_WORDS_SCENE
 
 log = logging.getLogger("worker.script")
 
-MAX_ATTEMPTS    = 3
-MIN_WORDS_TOTAL = 90
-MIN_WORDS_SCENE = 22
-RETRY_DELAY     = 20
+MAX_ATTEMPTS = 3
+RETRY_DELAY = 15
 
+def validate_word_count(script_data: dict) -> tuple[bool, str, dict]:
+    """Validasi mendalam jumlah kata per adegan."""
+    scenes = script_data.get("scenes", [])
+    counts = [len(s.get("text", "").split()) for s in scenes]
+    total = sum(counts)
+    
+    short_scenes = [i+1 for i, wc in enumerate(counts) if wc < SCRIPT_MIN_WORDS_SCENE]
+    
+    stats = {
+        "total": total,
+        "scenes": counts,
+        "short_scenes": short_scenes
+    }
 
-def validate_word_count(script_data: dict) -> tuple[bool, str]:
-    scenes      = script_data.get("scenes", [])
-    total_words = sum(len(s.get("text", "").split()) for s in scenes)
-    short       = [s["id"] for s in scenes
-                   if len(s.get("text", "").split()) < MIN_WORDS_SCENE]
-
-    if total_words < MIN_WORDS_TOTAL:
-        return False, f"total {total_words} words (need {MIN_WORDS_TOTAL}+)"
-    if short:
-        return False, f"scenes {short} below {MIN_WORDS_SCENE} words"
-    return True, "ok"
-
+    if short_scenes:
+        return False, f"Adegan {short_scenes} terlalu singkat (min {SCRIPT_MIN_WORDS_SCENE} kata)", stats
+    if total < SCRIPT_MIN_WORDS_TOTAL:
+        return False, f"Total kata {total} belum mencapai target minimal {SCRIPT_MIN_WORDS_TOTAL}", stats
+    
+    return True, "✅ Valid", stats
 
 def run(headline: str, tone: int, run_dir: Path) -> dict | None:
-    """
-    Generate script and save to run_dir.
-    tone param kept for API compatibility but ignored — locked to the auditor.
-    Returns script_data dict or None on failure.
-    """
+    """Menjalankan proses pembuatan naskah dengan retry logic."""
     script_file = run_dir / "script_output.json"
-
-    best        = None
-    best_words  = 0
+    best_script = None
+    max_total_found = 0
 
     for attempt in range(MAX_ATTEMPTS):
         if attempt > 0:
-            log.info(f"Waiting {RETRY_DELAY}s before retry...")
+            log.info(f"Menunggu {RETRY_DELAY} detik sebelum mencoba lagi...")
             time.sleep(RETRY_DELAY)
 
-        log.info(f"Generating script attempt {attempt+1}/{MAX_ATTEMPTS}")
+        log.info(f"Memulai Attempt {attempt+1}/{MAX_ATTEMPTS}")
         raw = generate_script(headline)
-
+        
         if not raw:
-            log.warning(f"Generation returned None — attempt {attempt+1}")
             continue
 
         script_data = to_script_output(raw)
-        total_words = sum(len(s.get("text","").split())
-                         for s in script_data.get("scenes", []))
+        is_valid, reason, stats = validate_word_count(script_data)
+        
+        log.info(f"  Statistik: {' + '.join(map(str, stats['scenes']))} = {stats['total']} kata")
+        log.info(f"  Hasil: {reason}")
 
-        # Track best result regardless
-        if total_words > best_words:
-            best       = script_data
-            best_words = total_words
+        # Simpan yang terbaik sebagai cadangan jika semua attempt gagal validasi
+        if stats['total'] > max_total_found:
+            max_total_found = stats['total']
+            best_script = script_data
 
-        ok, reason = validate_word_count(script_data)
-        if ok:
-            log.info(f"Word count OK ({total_words} words) on attempt {attempt+1}")
-            best = script_data
+        if is_valid:
+            log.info(f"✅ Naskah memenuhi syarat pada attempt {attempt+1}")
+            best_script = script_data
             break
-        else:
-            log.warning(f"Word count: {reason} — best so far: {best_words}")
 
-    if not best:
-        log.error("All attempts failed")
+    if not best_script:
+        log.error("❌ Gagal membuat naskah setelah semua percobaan.")
         return None
 
-    if best_words < MIN_WORDS_TOTAL:
-        log.warning(f"Using best available: {best_words} words (below target)")
-
-    # ========== TAMBAHAN: REFINE SCRIPT (FIX TYPO) ==========
+    # Proses Refinement (Opsional tapi disarankan)
     try:
         from agents.refiner_agent import refine_script
-        log.info("Refining script (fixing typos, spacing)...")
-        best = refine_script(best)
-        log.info("Refinement done")
-    except Exception as e:
-        log.warning(f"Refinement skipped: {e}")
-    # ========== END TAMBAHAN ==========
+        log.info("Memperhalus naskah & menentukan emosi...")
+        best_script = refine_script(best_script)
+    except ImportError:
+        log.warning("Refiner agent tidak ditemukan, melewati tahap perbaikan.")
 
+    # Simpan hasil
     with open(script_file, "w", encoding="utf-8") as f:
-        json.dump(best, f, ensure_ascii=False, indent=2)
+        json.dump(best_script, f, ensure_ascii=False, indent=2)
 
-    log.info(f"Saved → {script_file.name}  words={best_words}")
-    return best
+    log.info(f"✅ Skrip disimpan di: {script_file.name} ({max_total_found} kata)")
+    return best_script

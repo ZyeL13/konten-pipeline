@@ -55,11 +55,22 @@ def run(script_data: dict, run_dir: Path) -> bool:
     audio_dur = get_audio_duration(str(voice_file))
     log.info(f"Audio: {audio_dur:.1f}s  Scenes: {len(scenes)}")
 
-    # ── Proportional scene durations by word count ────────────────────────────
+    # ── Proportional scene durations by word count, with MIN 12s per scene ───────────────
     scene_words = [len(s.get("text", "").split()) for s in scenes]
     total_words = sum(scene_words) or len(scenes)
-    scene_durs  = [audio_dur * (w / total_words) for w in scene_words]
-    log.info(f"Scene durations: {[round(d,1) for d in scene_durs]}")
+
+    # Base proportional, but enforce minimum
+    base_durs = [audio_dur * (w / total_words) for w in scene_words]
+    min_dur   = 12.0  # seconds — minimal untuk visual + subtitle legible
+    scene_durs = [max(d, min_dur) for d in base_durs]
+
+    # If total exceeds audio_dur, scale down
+    total_assigned = sum(scene_durs)
+    if total_assigned > audio_dur:
+        scale = audio_dur / total_assigned
+        scene_durs = [d * scale for d in scene_durs]
+
+    log.info(f"Scene durations (min 12s): {[round(d,1) for d in scene_durs]}")
 
     # ── Step 1: Scene clips ───────────────────────────────────────────────────
     log.info("Step 1/5 — scene clips (Ken Burns)")

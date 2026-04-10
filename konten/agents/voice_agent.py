@@ -30,15 +30,26 @@ def build_narration(script_data: dict) -> str:
     hook = script_data.get("hook", "").strip()
     if hook:
         parts.append(hook)
+
     for scene in script_data.get("scenes", []):
         text = scene.get("text", "").strip()
         if text:
             parts.append(text)
+
     cta = script_data.get("cta", "").strip()
     if cta:
         parts.append(cta)
-    raw = "... ".join(parts) + "."
-    return clean_text(raw)
+
+    raw = " ... ".join(parts) + ". "
+    cleaned = clean_text(raw)
+
+    # If too short (<80 words), add subtle pause markers to stretch duration
+    words = len(cleaned.split())
+    if words < 80:
+        padding = " [pause] " * ((80 - words) // 5)
+        cleaned = cleaned + padding
+
+    return cleaned
 
 
 # ── Edge TTS ──────────────────────────────────────────────────────────────────

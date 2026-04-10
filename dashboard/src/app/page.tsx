@@ -77,9 +77,17 @@ export default function Dashboard() {
                 {' '}— built from Android via Termux
               </p>
             </div>
-            <div className="flex items-center gap-2 text-[10px]">
-              <span className="w-2 h-2 rounded-full bg-[var(--teal)] animate-pulse" />
-              <span className="text-[var(--teal)] tracking-widest">ALL_SYSTEMS_NOMINAL</span>
+            <div className="flex items-center gap-3 text-[10px]">
+              <Link
+                href="/services"
+                className="tracking-widest px-3 py-1.5 border border-[var(--amber-dim)] text-[var(--amber)] hover:bg-[var(--amber-dim)] transition-colors"
+              >
+                💼 SERVICES →
+              </Link>
+              <span className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[var(--teal)] animate-pulse" />
+                <span className="text-[var(--teal)] tracking-widest">ALL_SYSTEMS_NOMINAL</span>
+              </span>
             </div>
           </div>
         </header>
@@ -168,9 +176,15 @@ export default function Dashboard() {
         {/* ── FOOTER ────────────────────────────────────────────── */}
         <footer className="fade-in-up delay-5 border-t border-[var(--border)] pt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-[9px] text-[var(--text-muted)]">
           <span>OPENCLAW_LAB // ZyeL13 // JAKARTA, ID</span>
-          <span>STACK: TERMUX × PYTHON × NEXT.JS × GROQ × FREE_TIER</span>
+          <div className="flex items-center gap-4">
+            <Link href="/services" className="hover:text-[var(--amber)] transition-colors tracking-widest">
+              💼 SERVICES
+            </Link>
+            <span>STACK: TERMUX × PYTHON × NEXT.JS × GROQ × FREE_TIER</span>
+          </div>
         </footer>
       </div>
     </main>
   );
 }
+

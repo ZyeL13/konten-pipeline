@@ -1,67 +1,80 @@
 """
-workers/worker_visual.py — Visual worker.
-Handles retries, file saving, logging.
+workers/worker_visual.py — Image generation worker.
+Uses image.pollinations.ai API with retry logic.
 """
-
 import json
 import logging
 import time
 from pathlib import Path
-from datetime import datetime
-
-from agents.visual_agent import build_prompt, fetch_image
+from agents.visual_agent import build_prompt, fetch_best
+from core.config import IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_MODEL
 
 log = logging.getLogger("worker.visual")
-MAX_RETRIES = 3
-RETRY_DELAY = 30
 
+MAX_RETRIES = 2
+
+def _call_api(prompt: str, output_path: Path, scene_id: int) -> bool:
+    """
+    Call pollinations.ai to generate image.
+    Returns True if image saved successfully.
+    """
+    try:
+        # Fetch best of 2 images with different seeds
+        image_bytes = fetch_best(prompt, scene_id)
+        
+        if image_bytes and len(image_bytes) > 1024:  # >1KB
+            output_path.write_bytes(image_bytes)
+            size_kb = len(image_bytes) // 1024
+            log.info(f"  {output_path.name} ({size_kb}KB)")
+            return True
+        else:
+            log.warning(f"  Empty or invalid image returned")
+            return False
+    except Exception as e:
+        log.warning(f"  Request failed: {e}")
+        return False
 
 def run(script_data: dict, run_dir: Path) -> bool:
-    scenes     = script_data.get("scenes", [])
+    """
+    Generate scene images based on script visuals.
+    Returns True if ALL required images are generated.
+    """
     scenes_dir = run_dir / "scenes"
     scenes_dir.mkdir(exist_ok=True)
-
+    
+    scenes = script_data.get("scenes", [])
     log.info(f"Generating {len(scenes)} scene images")
-
-    results = []
-    success = 0
-
-    for scene in scenes:
-        sid    = scene.get("id", 0)
-        visual = scene.get("visual", "")
-        prompt = build_prompt(visual)
-        out    = scenes_dir / f"scene_{sid}.png"
-
-        img_bytes = None
-        for attempt in range(MAX_RETRIES):
-            log.info(f"  scene_{sid} attempt {attempt+1}/{MAX_RETRIES}")
-            log.debug(f"  prompt: {prompt[:80]}")
-            img_bytes = fetch_image(prompt, sid)
-            if img_bytes:
+    
+    success_count = 0
+    for i, scene in enumerate(scenes):
+        scene_id = scene.get("id", i + 1)
+        beat = scene.get("beat", "unknown")
+        text = scene.get("text", "")
+        
+        log.info(f"  scene_{scene_id} beat='{beat}'")
+        
+        # Build prompt using agent
+        visual_prompt = build_prompt(text, beat, scene_id)
+        
+        output_path = scenes_dir / f"scene_{scene_id}.png"
+        
+        # Try with retry
+        success = False
+        for attempt in range(MAX_RETRIES + 1):
+            if attempt > 0:
+                log.info(f"  Retry {attempt}/{MAX_RETRIES}...")
+                time.sleep(5)
+            
+            if _call_api(visual_prompt, output_path, scene_id):
+                success = True
                 break
-            log.warning(f"  scene_{sid} failed, waiting {RETRY_DELAY}s...")
-            time.sleep(RETRY_DELAY)
-
-        if img_bytes:
-            with open(out, "wb") as f:
-                f.write(img_bytes)
-            log.info(f"  scene_{sid}.png ({len(img_bytes)//1024}KB)")
-            success += 1
-            results.append({"scene_id": sid, "ok": True, "prompt": prompt[:80]})
+        
+        if success:
+            success_count += 1
         else:
-            log.error(f"  scene_{sid} all attempts failed")
-            results.append({"scene_id": sid, "ok": False, "prompt": prompt[:80]})
-
-        time.sleep(60)  # Pollinations rate limit
-
-    with open(run_dir / "visual_log.json", "w") as f:
-        json.dump({
-            "generated_at": datetime.now().isoformat(),
-            "total"       : len(scenes),
-            "success"     : success,
-            "scenes"      : results
-        }, f, indent=2)
-
-    log.info(f"Visual done: {success}/{len(scenes)}")
-    return success == len(scenes)
-
+            log.warning(f"  scene_{scene_id} all attempts failed")
+            # Hapus file kosong jika gagal
+            output_path.unlink(missing_ok=True)
+    
+    log.info(f"Visual done: {success_count}/{len(scenes)}")
+    return success_count == len(scenes)

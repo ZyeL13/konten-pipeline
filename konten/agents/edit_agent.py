@@ -22,7 +22,7 @@ def get_audio_duration(audio_path: str) -> float:
     path = Path(audio_path)
     if not path.exists() or path.stat().st_size < 1024:
         log.warning(f"Audio file too small or missing: {path}")
-        return 45.0  # realistic fallback for short narration
+        return 45.0
 
     cmd = [
         "ffprobe", "-v", "quiet",
@@ -42,12 +42,13 @@ def get_audio_duration(audio_path: str) -> float:
         return 45.0
 
 def make_scene_clip(img_path: str, duration: float, out_path: str) -> bool:
-    """PNG -> H264 video clip with Ken Burns zoom. yuv420p for compatibility."""
-    zoom_speed   = 0.0005
+    """PNG -> H264 video clip with Ken Burns zoom. yuv420p for compatibility."""    
+    zoom_speed = 0.0005
     total_frames = int(duration * VIDEO_FPS)
     
     vf = (
-        f"scale={VIDEO_WIDTH*2}:{VIDEO_HEIGHT*2},"        f"zoompan=z='min(zoom+{zoom_speed},1.05)':"
+        f"scale={VIDEO_WIDTH*2}:{VIDEO_HEIGHT*2},"
+        f"zoompan=z='min(zoom+{zoom_speed},1.05)':"
         f"d={total_frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
         f"s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS},"
         f"format=yuv420p"
@@ -96,22 +97,21 @@ def add_audio(video_path: str, audio_path: str, out_path: str) -> bool:
     if result.returncode != 0:
         log.error(f"add_audio failed: {result.stderr.decode()[-200:]}")
     return result.returncode == 0
+
 def _clean_subtitle(text: str, max_chars: int = 24) -> str:
     """
     Aggressive word separation + typo cleanup for FFmpeg drawtext.
     Handles: "goodnconflict" -> "good conflict", "betweennthe" -> "between the"
     """
-    # Step 0: Normalize spacing & remove dangerous chars
-    text = re.sub(r'[^\w\s,.-!?]', ' ', text)
+    text = re.sub(r'[^\w\s,.\-!?]', ' ', text)
     text = re.sub(r'\s+', ' ', text).strip()
     
-    # Step 1: Fix common stuck words (case-insensitive)
     stuck_pairs = [
         ("goodn", "good "),
         ("badn", "bad "),
         ("thenn", "then "),
         ("betweenn", "between "),
-        ("the", " the "),  # add space around standalone "the"
+        ("the", " the "),
         ("andn", "and "),
         ("orn", "or "),
         ("inb", "in "),
@@ -122,51 +122,38 @@ def _clean_subtitle(text: str, max_chars: int = 24) -> str:
         ("ofn", "of "),
         ("vestn", "vest "),
         ("billionsn", "billions "),
-        ("Anthropic", "Anthropic "),  # prevent "Anthropic." -> "Anthropic ."
+        ("Anthropic", "Anthropic "),
     ]
     for wrong, right in stuck_pairs:
         text = re.sub(rf'\b{wrong}\b', right, text, flags=re.IGNORECASE)
 
-    # Step 2: CamelCase & number-letter split (more aggressive)
-    text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)          # likeTectonic -> like Tectonic
-    text = re.sub(r'(\d)([a-zA-Z])', r'\1 \2', text)           # 4732years -> 4732 years
-    text = re.sub(r'([a-zA-Z])(\d)', r'\1 \2', text)          # nodes47 -> nodes 47
+    text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
+    text = re.sub(r'(\d)([a-zA-Z])', r'\1 \2', text)
+    text = re.sub(r'([a-zA-Z])(\d)', r'\1 \2', text)
+    text = re.sub(r'([a-zA-Z])\1{2,}', r'\1\1', text)
 
-    # Step 3: Remove repeated letters (e.g., "conflllict" -> "conflict")
-    text = re.sub(r'([a-zA-Z])\1{2,}', r'\1\1', text)         # 3+ same char -> 2
-
-    # Step 4: Wrap safely
     lines = textwrap.wrap(text, width=max_chars, break_long_words=False, replace_whitespace=False)
     return "\\n".join(lines[:2])
 
-def add_subtitles(
-    video_path  : str,
-    scenes      : list,
-    audio_dur   : float,
-    out_path    : str,
-    scene_durs  : list = None
-) -> bool:    """
-    Burn subtitles with proportional timing.
-    Uses -vf drawtext (not filter_script which is unsupported).
-    """
+def add_subtitles(video_path: str, scenes: list, audio_dur: float, out_path: str, scene_durs: list = None) -> bool:
     if scene_durs and len(scene_durs) == len(scenes):
         dur_list = scene_durs
     else:
-        per      = audio_dur / max(len(scenes), 1)
+        per = audio_dur / max(len(scenes), 1)
         dur_list = [per] * len(scenes)
     
     filters = []
-    curr    = 0.0
+    curr = 0.0
 
     for i, scene in enumerate(scenes):
-        dur  = dur_list[i]
+        dur = dur_list[i]
         text = _clean_subtitle(scene.get("text", ""))
         if not text:
             curr += dur
             continue
 
         start = round(curr, 3)
-        end   = round(curr + dur - 0.2, 3)
+        end = round(curr + dur - 0.2, 3)
 
         filters.append(
             f"drawtext=text='{text}':"
@@ -182,37 +169,25 @@ def add_subtitles(
         curr += dur
 
     if not filters:
-        # No subtitles — just copy
         import shutil
         shutil.copy(video_path, out_path)
         return True
 
-    vf     = ", ".join(filters)
-    cmd    = [
+    vf = ", ".join(filters)
+    cmd = [
         "ffmpeg", "-y", "-i", video_path,
         "-vf", vf,
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-pix_fmt", "yuv420p",
         "-c:a", "copy",
-        out_path    ]
+        out_path
+    ]
     result = subprocess.run(cmd, capture_output=True, timeout=FFMPEG_TIMEOUT)
     if result.returncode != 0:
         log.error(f"add_subtitles failed: {result.stderr.decode()[-300:]}")
     return result.returncode == 0
 
-def add_character_overlay_blended(
-    video_path: str,
-    character_path: str,
-    out_path: str,
-    position: str = "bottom-left",
-    scale: int = 280,
-    opacity: float = 0.95,
-    feather: int = 20  # NEW: soft edge radius in pixels
-) -> bool:
-    """
-    Overlay character with soft edge (feather) using alpha channel + blur mask.
-    Requires PNG with transparent background.
-    """
+def add_character_overlay_blended(video_path: str, character_path: str, out_path: str, position: str = "bottom-left", scale: int = 280, opacity: float = 0.95, feather: int = 20) -> bool:
     pos_map = {
         "bottom-left": ("30", "H-h-30"),
         "bottom-right": ("W-w-30", "H-h-30"),
@@ -221,10 +196,6 @@ def add_character_overlay_blended(
     }
     x_pos, y_pos = pos_map.get(position, ("30", "H-h-30"))
     
-    # Build filter:
-    # 1. Scale char
-    # 2. Add soft edge via alpha + boxblur on alpha channel only
-    # 3. Composite with overlay
     filter_complex = (
         f"[1:v]scale={scale}:-1,format=rgba,"
         f"split[chr][alpha];"
@@ -243,7 +214,8 @@ def add_character_overlay_blended(
         "-c:v", "libx264", "-preset", "fast", "-crf", "23",
         "-pix_fmt", "yuv420p",
         "-c:a", "copy",
-        out_path    ]
+        out_path
+    ]
 
     result = subprocess.run(cmd, capture_output=True, timeout=FFMPEG_TIMEOUT)
     if result.returncode != 0:

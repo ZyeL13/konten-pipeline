@@ -9,7 +9,7 @@ import uuid
 import requests
 from datetime import datetime
 from pathlib import Path
-
+from core.prompts import SYS_CLARIFIER, SYS_SUMMARIZER, SYS_OPTIMIZER
 # Import config
 sys.path.insert(0, str(Path(__file__).parent))
 from core.config import LLM_API_KEY, LLM_BASE, LLM_MODEL, TIMEOUT, QUEUE_FILE
@@ -61,24 +61,6 @@ def llm_call(system: str, user: str, max_tokens: int = 300) -> str:
         print(f"[ERROR] LLM call gagal: {e}")
         sys.exit(1)
 
-SYS_CLARIFIER = """
-You are a content brief assistant for OpenClaw.
-Pipeline output: short-form video (TikTok/Reels/Shorts), persona: THE AUDITOR.
-Given a user's initial idea, generate EXACTLY 2-3 sharp clarification questions.
-Output format — plain numbered list, zero preamble."""
-
-SYS_SUMMARIZER = """
-You are a content brief compiler.
-Given a user's idea and answers, write a concise human-readable brief.
-Max 3 sentences. Plain prose. No bullets."""
-
-SYS_OPTIMIZER = """
-You are a production prompt compiler.
-Translate the creative brief into a machine-readable instruction string.
-Format: [KEY:VALUE][KEY:VALUE]...
-Required keys: TASK, STYLE, TONE, TOPIC, KEY_ELEMENTS, DURATION, LANG.
-STYLE is always THE_AUDITOR. DURATION is always 15S.
-Output ONLY the instruction string."""
 
 def push_to_queue(job: dict) -> None:
     """Push job to queue file."""

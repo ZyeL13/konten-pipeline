@@ -7,6 +7,8 @@ import logging
 import random
 import requests
 from pathlib import Path
+from core.prompts import SYSTEM_PROMPT_SCRIPT, CHANNEL_VOICE, SCENE_STRUCTURE
+SYSTEM_PROMPT = SYSTEM_PROMPT_SCRIPT
 from core.config import (
     SCRIPT_TEMPERATURE, SCRIPT_MIN_WORDS_TOTAL, SCRIPT_MAX_WORDS_TOTAL, SCRIPT_MAX_WORDS_SCENE
 )
@@ -14,46 +16,6 @@ from core.config import (
 log = logging.getLogger("agent.script")
 SCRIPT_MAX_TOKENS = 2500
 
-# ── VOICE & STYLE (unchanged, keys cleaned) ───────────────────────────────
-CHANNEL_VOICE = """
-You are "the auditor" — someone who has reviewed the books
-of civilizations and found them all, eventually, fraudulent.
-"""
-
-SCENE_STRUCTURE = """
-MANDATORY SCENE PROGRESSION — this is the architecture of every script:
-Scene 1 — INTRODUCE (15s, 4-6 words): State the fact. Cold.
-Scene 2 — DOUBT / CONFLICT (15s, 4-6 words): The gap.
-Scene 3 — TWIST / ABSURDITY PEAKS (16s, 5-7 words): The reframe.
-Scene 4 — PUNCHLINE (15s, 4-6 words): One verdict. Close the case.
-"""
-
-# ── SYSTEM PROMPT with HARD WORD LIMIT ─────────────────────────────────────
-SYSTEM_PROMPT = f"""
-{CHANNEL_VOICE}
-{SCENE_STRUCTURE}
-[CONSTRAINT — NON-NEGOTIABLE]
-- Total narration MUST be between {SCRIPT_MIN_WORDS_TOTAL} and {SCRIPT_MAX_WORDS_TOTAL} words.
-- Per scene MAX {SCRIPT_MAX_WORDS_SCENE} words.
-- If exceeding, CUT sentences. Do NOT add content.
-- Output ONLY valid JSON, no markdown, no explanation.
-
-JSON FORMAT:
-{{
-  "headline": "...",
-  "hook": "...",
-  "scenes": [
-    {{"id": 1, "text": "...", "visual": "...", "duration": 15, "beat": "introduce"}},
-    {{"id": 2, "text": "...", "visual": "...", "duration": 15, "beat": "doubt"}},
-    {{"id": 3, "text": "...", "visual": "...", "duration": 16, "beat": "twist"}},
-    {{"id": 4, "text": "...", "visual": "...", "duration": 15, "beat": "punchline"}}
-  ],
-  "cta": "...",
-  "caption": "...",
-  "hashtags": ["...", "..."],
-  "total_duration": 61
-}}
-"""
 
 def _load_practices_context() -> str:
     practices_file = Path(__file__).parent.parent / "memory" / "best_practices.json"

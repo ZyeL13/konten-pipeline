@@ -35,7 +35,8 @@ def get_llm_config(use_fallback: bool = False) -> tuple:
     return LLM_BASE_PRIMARY, LLM_MODEL, LLM_API_KEY
 
 # ── VISION QC ─────────────────────────────────────────────────────────────────
-VISION_MODEL = "llama-3.2-11b-vision-preview"
+VISION_MODEL = os.environ.get("VISION_MODEL", "llama-3.2-90b-vision-preview")
+VISION_TIMEOUT = 30  # Lebih singkat karena cuma butuh 2 frame analysis
 
 # ── VOICE ─────────────────────────────────────────────────────────────────────
 VOICE_LANG_DEFAULT = "en"
